@@ -142,7 +142,7 @@ export default function Dashboard() {
           <article className="stat-card">
             <span className="stat-icon">✦</span>
             <p>Bakery Products</p>
-            <h2>{summary?.number_of_items ?? "—"}</h2>
+            <h2>{summary?.number_of_items ?? summary?.items_available ?? "—"}</h2>
             <span className="stat-note">Distinct products</span>
           </article>
         </section>

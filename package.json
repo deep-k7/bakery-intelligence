@@ -1,0 +1,13 @@
+{
+  "name": "bakery-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Crumb & Co. Bakery Intelligence - Machine Learning Sales & Revenue Prediction",
+  "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "dev:backend": "uvicorn backend.main:app --reload",
+    "lint": "npm --prefix frontend run lint",
+    "preview": "npm --prefix frontend run preview"
+  }
+}
