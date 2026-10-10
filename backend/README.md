@@ -16,4 +16,4 @@ RMSE: 2.821
 R2 Score: 0.632
 
 
-`streamlit run app.py`
+`streamlit run streamlit_app.py`
