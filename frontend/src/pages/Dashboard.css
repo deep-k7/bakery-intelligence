@@ -403,6 +403,239 @@ select {
   padding: 10px 0 20px;
 }
 
+/* Enhanced Controls & Badges */
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  background: #f7ede3;
+  border: 1px solid #ebd9ca;
+  color: #794c33;
+  padding: 4px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  background: #ecd5c3;
+  color: #492b1b;
+}
+
+.chip.active {
+  background: #8d5940;
+  color: #fff;
+  border-color: #8d5940;
+}
+
+.period-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.period-pill {
+  flex: 1;
+  min-width: 62px;
+  text-align: center;
+  background: #fbf5ef;
+  border: 1px solid #ebd9ca;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.15s ease;
+  color: #5d4639;
+}
+
+.period-pill:hover {
+  background: #f3e5d7;
+}
+
+.period-pill.active {
+  background: #8d5940;
+  color: #fff;
+  border-color: #8d5940;
+  font-weight: 600;
+}
+
+.demand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.demand-high {
+  background: #fee7e2;
+  color: #b83a23;
+  border: 1px solid #f9cac1;
+}
+
+.demand-medium {
+  background: #fef3d6;
+  color: #92680f;
+  border: 1px solid #fbe1a2;
+}
+
+.demand-low {
+  background: #edf7ed;
+  color: #276a3c;
+  border: 1px solid #cce5cc;
+}
+
+.header-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  background: #f0ebe4;
+  color: #5a4b42;
+  font-weight: 600;
+}
+
+.status-pill.online {
+  background: #eaf6ec;
+  color: #2b7741;
+}
+
+.status-pill.offline {
+  background: #fdeeee;
+  color: #b03830;
+}
+
+.refresh-btn {
+  background: transparent;
+  border: 1px solid #ddd1c7;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #7d695e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.refresh-btn:hover {
+  background: #eedfd3;
+  color: #3b281d;
+}
+
+.error-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e8b9b2;
+  background: #fff0ee;
+  color: #913f35;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.dismiss-btn {
+  background: transparent;
+  border: 0;
+  color: #913f35;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+.recent-history-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed #e8d7ca;
+}
+
+.recent-history-heading {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #a36b4d;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.history-card {
+  background: #ffffff;
+  border: 1px solid #ede1d6;
+  border-radius: 9px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.history-card:hover {
+  border-color: #a56d4d;
+  box-shadow: 0 2px 8px #5c381c15;
+  transform: translateY(-1px);
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #34251f;
+}
+
+.history-card-meta {
+  font-size: 10px;
+  color: #89796f;
+  text-transform: capitalize;
+}
+
+.history-card-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-top: 4px;
+  color: #49362d;
+}
+
+.history-card-values strong {
+  color: #8d5940;
+}
+
+
 @media (max-width: 1050px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

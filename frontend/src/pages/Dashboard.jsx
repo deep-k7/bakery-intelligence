@@ -7,49 +7,127 @@ import {
 import BasketAnalysis from "../components/BasketAnalysis";
 import "./Dashboard.css";
 
-export default function Dashboard() {
-  const today = new Date().toISOString().split("T")[0];
+const QUICK_ITEMS = ["Coffee", "Bread", "Tea", "Pastry", "Medialuna"];
 
+const PERIOD_CONFIG = [
+  { id: "morning", label: "Morning", icon: "🌅" },
+  { id: "afternoon", label: "Afternoon", icon: "☀️" },
+  { id: "evening", label: "Evening", icon: "🌆" },
+  { id: "night", label: "Night", icon: "🌙" },
+];
+
+const getInitialDate = () => {
+  const now = new Date();
+  return {
+    iso: now.toISOString().split("T")[0],
+    formatted: now.toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+  };
+};
+
+const INITIAL_DATE = getInitialDate();
+
+export default function Dashboard() {
   const [options, setOptions] = useState({
     items: [],
     periods: [],
   });
   const [summary, setSummary] = useState(null);
   const [item, setItem] = useState("");
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedDate, setSelectedDate] = useState(INITIAL_DATE.iso);
   const [period, setPeriod] = useState("");
   const [prediction, setPrediction] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+  const [apiOnline, setApiOnline] = useState(null);
+  const [activeSection, setActiveSection] = useState("dashboard");
+
+  const refreshDashboard = async () => {
+    setFetching(true);
+    setError("");
+    try {
+      const [optionData, summaryData] = await Promise.all([
+        getPredictionOptions(),
+        getDashboardSummary(),
+      ]);
+
+      setOptions(optionData);
+      setSummary(summaryData);
+      setApiOnline(true);
+      if (optionData.items?.length) {
+        setItem((prev) => prev || optionData.items[0]);
+      }
+      if (optionData.periods?.length) {
+        setPeriod((prev) => prev || optionData.periods[0]);
+      }
+    } catch (err) {
+      setApiOnline(false);
+      setError(
+        err.response?.data?.detail ||
+          "Could not connect to the backend. Check that FastAPI is running.",
+      );
+    } finally {
+      setFetching(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadDashboard() {
+    let ignore = false;
+
+    async function init() {
+      setFetching(true);
+      setError("");
       try {
         const [optionData, summaryData] = await Promise.all([
           getPredictionOptions(),
           getDashboardSummary(),
         ]);
 
-        setOptions(optionData);
-        setSummary(summaryData);
-        setItem(optionData.items?.[0] || "");
-        setPeriod(optionData.periods?.[0] || "");
+        if (!ignore) {
+          setOptions(optionData);
+          setSummary(summaryData);
+          setApiOnline(true);
+          if (optionData.items?.length) {
+            setItem((prev) => prev || optionData.items[0]);
+          }
+          if (optionData.periods?.length) {
+            setPeriod((prev) => prev || optionData.periods[0]);
+          }
+        }
       } catch (err) {
-        setError(
-          err.response?.data?.detail ||
-            "Could not connect to the backend. Check that FastAPI is running.",
-        );
+        if (!ignore) {
+          setApiOnline(false);
+          setError(
+            err.response?.data?.detail ||
+              "Could not connect to the backend. Check that FastAPI is running.",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setFetching(false);
+        }
       }
     }
 
-    loadDashboard();
+    init();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   async function handlePredict(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
+    if (!item || !period) return;
+
     setLoading(true);
     setError("");
-    setPrediction(null);
 
     try {
       const result = await predictSales({
@@ -59,6 +137,17 @@ export default function Dashboard() {
       });
 
       setPrediction(result);
+      setHistory((prev) => {
+        const withoutCurrent = prev.filter(
+          (h) =>
+            !(
+              h.item === result.item &&
+              h.period === result.period &&
+              h.date === result.date
+            ),
+        );
+        return [result, ...withoutCurrent].slice(0, 4);
+      });
     } catch (err) {
       setError(err.response?.data?.detail || "Sales prediction failed.");
     } finally {
@@ -66,10 +155,60 @@ export default function Dashboard() {
     }
   }
 
+  const setQuickDate = (type) => {
+    const d = new Date();
+    if (type === "today") {
+      // today
+    } else if (type === "tomorrow") {
+      d.setDate(d.getDate() + 1);
+    } else if (type === "saturday") {
+      const day = d.getDay();
+      let diff = 6 - day;
+      if (diff <= 0) diff += 7;
+      d.setDate(d.getDate() + diff);
+    } else if (type === "sunday") {
+      const day = d.getDay();
+      let diff = (7 - day) % 7;
+      if (diff === 0) diff = 7;
+      d.setDate(d.getDate() + diff);
+    }
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  const scrollTo = (id) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const money = (value) =>
     new Intl.NumberFormat("en-IN", {
       maximumFractionDigits: 2,
     }).format(Number(value || 0));
+
+  const getDemandBadge = (quantity) => {
+    if (quantity >= 20) {
+      return {
+        label: "High Demand",
+        icon: "🔥",
+        className: "demand-badge demand-high",
+      };
+    }
+    if (quantity >= 10) {
+      return {
+        label: "Moderate Demand",
+        icon: "✨",
+        className: "demand-badge demand-medium",
+      };
+    }
+    return {
+      label: "Steady Demand",
+      icon: "🌱",
+      className: "demand-badge demand-low",
+    };
+  };
 
   return (
     <div className="app-shell">
@@ -83,20 +222,37 @@ export default function Dashboard() {
         </div>
 
         <nav className="navigation">
-          <a className="nav-link active" href="#dashboard">
+          <button
+            type="button"
+            className={`nav-link ${activeSection === "dashboard" ? "active" : ""}`}
+            onClick={() => scrollTo("dashboard")}
+          >
             <span>▦</span> Dashboard
-          </a>
-          <a className="nav-link" href="#prediction">
+          </button>
+          <button
+            type="button"
+            className={`nav-link ${activeSection === "prediction" ? "active" : ""}`}
+            onClick={() => scrollTo("prediction")}
+          >
             <span>↗</span> Sales Prediction
-          </a>
-          <a className="nav-link" href="#basket-analysis">
+          </button>
+          <button
+            type="button"
+            className={`nav-link ${activeSection === "basket-analysis" ? "active" : ""}`}
+            onClick={() => scrollTo("basket-analysis")}
+          >
             <span>◎</span> Basket Analysis
-          </a>
+          </button>
         </nav>
 
         <div className="sidebar-footer">
-          <span className="status-dot" />
-          Bakery Sales Analytics
+          <span
+            className="status-dot"
+            style={{
+              background: apiOnline === false ? "#e0584b" : "#8dc9a0",
+            }}
+          />
+          {apiOnline === false ? "Backend Offline" : "Bakery Analytics Online"}
         </div>
       </aside>
 
@@ -109,41 +265,81 @@ export default function Dashboard() {
               Understand historical sales and predict demand for your bakery.
             </p>
           </div>
-          <div className="today-label">
-            <span>Today</span>
-            <strong>{new Date().toLocaleDateString("en-IN")}</strong>
+
+          <div className="header-status-wrap">
+            <span
+              className={`status-pill ${
+                apiOnline === true ? "online" : apiOnline === false ? "offline" : ""
+              }`}
+            >
+              ● {apiOnline === true ? "API Connected" : apiOnline === false ? "API Disconnected" : "Connecting..."}
+            </span>
+            <button
+              type="button"
+              className="refresh-btn"
+              onClick={refreshDashboard}
+              title="Refresh dashboard data"
+              disabled={fetching}
+            >
+              ↻ Refresh
+            </button>
+            <div className="today-label">
+              <span>Today</span>
+              <strong>{INITIAL_DATE.formatted}</strong>
+            </div>
           </div>
         </header>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-banner">
+            <span>{error}</span>
+            <button
+              type="button"
+              className="dismiss-btn"
+              onClick={() => setError("")}
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <section className="stats-grid">
           <article className="stat-card">
             <span className="stat-icon">▤</span>
             <p>Historical Records</p>
             <h2>{summary?.total_records ?? "—"}</h2>
-            <span className="stat-note">Records in the dataset</span>
+            <span className="stat-note">
+              {summary?.data_start && summary?.data_end
+                ? `${summary.data_start} to ${summary.data_end}`
+                : "Records in dataset"}
+            </span>
           </article>
 
           <article className="stat-card">
             <span className="stat-icon">🥖</span>
             <p>Total Items Sold</p>
             <h2>{summary ? money(summary.total_items_sold) : "—"}</h2>
-            <span className="stat-note">Historical quantity</span>
+            <span className="stat-note">Historical units across all orders</span>
           </article>
 
           <article className="stat-card">
             <span className="stat-icon">₹</span>
             <p>Historical Revenue</p>
             <h2>{summary ? `₹${money(summary.historical_revenue)}` : "—"}</h2>
-            <span className="stat-note">Calculated from recorded sales</span>
+            <span className="stat-note">Calculated from recorded transactions</span>
           </article>
 
           <article className="stat-card">
             <span className="stat-icon">✦</span>
             <p>Bakery Products</p>
-            <h2>{summary?.number_of_items ?? summary?.items_available ?? "—"}</h2>
-            <span className="stat-note">Distinct products</span>
+            <h2>
+              {summary?.number_of_items ??
+                summary?.items_available ??
+                options.items?.length ??
+                "—"}
+            </h2>
+            <span className="stat-note">Distinct catalog items</span>
           </article>
         </section>
 
@@ -152,9 +348,9 @@ export default function Dashboard() {
             <div>
               <p className="eyebrow">MACHINE LEARNING</p>
               <h2>Predict Bakery Sales</h2>
-              <p>Choose a product, date, and selling period.</p>
+              <p>Choose a product, date, and selling period for AI-driven demand forecast.</p>
             </div>
-            <span className="model-tag">Random Forest</span>
+            <span className="model-tag">Random Forest Regressor</span>
           </div>
 
           <form className="prediction-form" onSubmit={handlePredict}>
@@ -171,6 +367,19 @@ export default function Dashboard() {
                   </option>
                 ))}
               </select>
+
+              <div className="quick-chips">
+                {QUICK_ITEMS.map((quickName) => (
+                  <button
+                    type="button"
+                    key={quickName}
+                    className={`chip ${item === quickName ? "active" : ""}`}
+                    onClick={() => setItem(quickName)}
+                  >
+                    {quickName}
+                  </button>
+                ))}
+              </div>
             </label>
 
             <label>
@@ -186,6 +395,37 @@ export default function Dashboard() {
                 }}
                 required
               />
+
+              <div className="quick-chips">
+                <button
+                  type="button"
+                  className={`chip ${selectedDate === INITIAL_DATE.iso ? "active" : ""}`}
+                  onClick={() => setQuickDate("today")}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => setQuickDate("tomorrow")}
+                >
+                  Tomorrow
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => setQuickDate("saturday")}
+                >
+                  Sat
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => setQuickDate("sunday")}
+                >
+                  Sun
+                </button>
+              </div>
             </label>
 
             <label>
@@ -197,10 +437,23 @@ export default function Dashboard() {
               >
                 {options.periods.map((p) => (
                   <option key={p} value={p}>
-                    {p}
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
                   </option>
                 ))}
               </select>
+
+              <div className="period-pill-group">
+                {PERIOD_CONFIG.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className={`period-pill ${period === p.id ? "active" : ""}`}
+                    onClick={() => setPeriod(p.id)}
+                  >
+                    {p.icon} {p.label}
+                  </button>
+                ))}
+              </div>
             </label>
 
             <button
@@ -208,7 +461,7 @@ export default function Dashboard() {
               type="submit"
               disabled={loading || !item || !period}
             >
-              {loading ? "Predicting..." : "Generate Prediction →"}
+              {loading ? "Calculating Forecast..." : "Generate Prediction →"}
             </button>
           </form>
 
@@ -219,9 +472,13 @@ export default function Dashboard() {
                   <span className="result-label">PREDICTION RESULT</span>
                   <h3>{prediction.item}</h3>
                   <p>
-                    {prediction.day_name} · {prediction.day_type} ·{" "}
-                    {prediction.period}
+                    {prediction.day_name} ({prediction.day_type}) ·{" "}
+                    {prediction.period.toUpperCase()} · {prediction.date}
                   </p>
+                  <span className={getDemandBadge(prediction.predicted_quantity).className}>
+                    {getDemandBadge(prediction.predicted_quantity).icon}{" "}
+                    {getDemandBadge(prediction.predicted_quantity).label}
+                  </span>
                 </div>
                 <span className="result-check">✓</span>
               </div>
@@ -230,23 +487,58 @@ export default function Dashboard() {
                 <div className="result-metric">
                   <span>Predicted Quantity</span>
                   <strong>
-                    {money(prediction.predicted_quantity)} <small>items</small>
+                    {money(prediction.predicted_quantity)} <small>units</small>
                   </strong>
                 </div>
                 <div className="result-metric">
                   <span>Price per Item</span>
-                  <strong>{money(prediction.price_per_item)}</strong>
+                  <strong>₹{money(prediction.price_per_item)}</strong>
                 </div>
                 <div className="result-metric revenue-result">
                   <span>Estimated Revenue</span>
-                  <strong>{money(prediction.predicted_revenue)}</strong>
+                  <strong>₹{money(prediction.predicted_revenue)}</strong>
                 </div>
               </div>
 
               <p className="result-disclaimer">
-                This is a model estimate, not a guaranteed sales outcome.
-                Revenue is calculated using the stored item price.
+                Model estimate generated by Random Forest based on historical sales patterns,
+                day-of-week trends, and selling period.
               </p>
+            </div>
+          )}
+
+          {history.length > 0 && (
+            <div className="recent-history-section">
+              <div className="recent-history-heading">
+                <span>RECENT PREDICTIONS COMPARISON</span>
+                <small>{history.length} saved</small>
+              </div>
+              <div className="history-cards-grid">
+                {history.map((h, idx) => (
+                  <button
+                    type="button"
+                    key={`${h.item}-${h.period}-${h.date}-${idx}`}
+                    className="history-card"
+                    onClick={() => {
+                      setItem(h.item);
+                      setSelectedDate(h.date);
+                      setPeriod(h.period);
+                      setPrediction(h);
+                    }}
+                    title="Click to view details"
+                  >
+                    <div className="history-card-header">
+                      <span className="history-card-title">{h.item}</span>
+                      <span className="history-card-meta">{h.period}</span>
+                    </div>
+                    <span className="history-card-meta">{h.day_name} · {h.date}</span>
+                    <div className="history-card-values">
+                      <span>{money(h.predicted_quantity)} units</span>
+                      <strong>₹{money(h.predicted_revenue)}</strong>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </section>
@@ -263,7 +555,7 @@ export default function Dashboard() {
         </section>
 
         <footer className="page-footer">
-          Crumb & Co. · Bakery Sales Prediction · Powered by Machine Learning
+          Crumb & Co. · Bakery Intelligence Platform · Powered by Scikit-Learn & FastAPI
         </footer>
       </main>
     </div>
